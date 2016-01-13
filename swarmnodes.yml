@@ -1,0 +1,5 @@
+- hosts: boxes
+  remote_user: swarm
+  gather_facts: yes
+  roles:
+    - docker-swarm

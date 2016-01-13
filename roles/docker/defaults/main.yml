@@ -1,0 +1,8 @@
+---
+apt_cache_valid_time: 86400
+apt_key_keyserver: hkp://p80.pool.sks-keyservers.net:80
+apt_key_id: 58118E89F3A912897C070ADBF76221572C52609D
+apt_repository_repo: "deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_distribution_release }} main"
+
+docker_package_name: docker-engine
+docker_package_state: present
