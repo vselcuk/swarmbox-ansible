@@ -10,5 +10,7 @@ Swarmbox provisioning with ansible
 192.168.0.131 hostname=swarmbox-04 hostname_suffix=04
 ```
 
+# Prepare your certificates needed for the swarm nodes and copy them to ./certs/docker
+
 # How to run
 ansible-playbook -i inventory.file -s site.yml

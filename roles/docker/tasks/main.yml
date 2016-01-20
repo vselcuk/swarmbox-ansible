@@ -14,7 +14,7 @@
 
 - name: Install certificates
   register: certificates
-  synchronize:
+  copy:
     src="./certs/docker/"
     dest="/etc/docker/"
 
