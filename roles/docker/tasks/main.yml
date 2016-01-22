@@ -18,8 +18,22 @@
     src="./certs/docker/"
     dest="/etc/docker/"
 
-- name: Restart the docker service
+- name: Generate certificates
+  command: chdir=/etc/docker/ {{ item }}
   when: certificates.changed
+  with_items:
+  - openssl genrsa -out server-key.pem 2048
+  - openssl req -subj "/CN={{ hostname }}" -new -key server-key.pem -out server-request.csr
+  - openssl x509 -req -days 3650 -in server-request.csr -CA ca.pem -CAkey CAkey.pem -CAcreateserial -out server.pem -extensions v3_req -extfile openssl.cnf
+  - openssl rsa -in server-key.pem -out server-key.pem
+  - rm CAkey.pem ca.srl openssl.cnf server-request.csr
+
+- name: "Add docker default opts to Upstart"
+  register: configuration
+  template: "src=daemon.conf.j2  dest=/etc/default/docker"
+
+- name: Restart the docker service
+  when: certificates.changed or configuration.changed
   service:
       name=docker
       state=restarted
