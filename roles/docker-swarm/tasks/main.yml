@@ -1,3 +1,73 @@
 ---
-- name: Pull docker swarm image
-  command: "docker pull swarm"
+
+- name: Install pip
+  apt: name=python-pip state=present
+
+- name: Install docker-py as a workaround for Ansible issue
+  pip: name=docker-py version=1.2.3
+
+- name: Install Consul on the master node
+  when: swarm_master is defined
+  docker:
+    name: consul
+    image: progrium/consul
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    expose:
+      - "53"
+      - "8301"
+      - "8302"
+      - "8400"
+      - "8500:8500"
+    ports:
+      - "53:53"
+      - "53:53/udp"
+      - "8301:8301"
+      - "8301:8301/udp"
+      - "8302:8302"
+      - "8302:8302/udp"
+      - "8400:8400"
+      - "8500:8500"
+    command: -server -bootstrap -ui-dir /ui
+
+- name: Run swarm agent master
+  when: swarm_master is defined
+  docker:
+    name: swarm-agent-master
+    image: swarm:latest
+    state: started
+    expose: "{{ smarm_master_port }}"
+    ports:
+    - "{{ smarm_master_port }}:{{ smarm_master_port }}"
+    pull: missing
+    restart_policy: always
+    detach: true
+    volumes:
+      - /etc/docker:/etc/docker
+      - /etc/hosts:/etc/hosts
+    command: >
+      manage
+        --tlsverify
+        --tlscacert=/etc/docker/ca.pem
+        --tlscert=/etc/docker/server.pem
+        --tlskey=/etc/docker/server-key.pem
+        --strategy spread
+        -H tcp://0.0.0.0:{{ smarm_master_port }}
+        consul://swarmbox-01:8500/
+
+- name: Run swarm agent
+  docker:
+    name: swarm-agent
+    image: swarm:latest
+    restart_policy: always
+    state: started
+    pull: missing
+    detach: true
+    volumes:
+      - /etc/hosts:/etc/hosts
+    command: >
+      join
+        --advertise={{ hostname }}:2375
+        consul://swarmbox-01:8500/
