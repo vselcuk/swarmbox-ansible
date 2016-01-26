@@ -1,1 +1,1 @@
-DOCKER_OPTS="-H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --tlsverify --tlscacert /etc/docker/ca.pem --tlscert /etc/docker/server.pem --tlskey /etc/docker/server-key.pem"
+DOCKER_OPTS="-H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --tlsverify --tlscacert /etc/docker/ca.pem --tlscert /etc/docker/server.pem --tlskey /etc/docker/server-key.pem --label com.docker.network.driver.overlay.bind_interface={{ ansible_default_ipv4.interface }} --cluster-store=consul://swarmbox-01:8500 --cluster-advertise={{ ansible_default_ipv4.interface }}:2376"

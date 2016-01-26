@@ -30,7 +30,7 @@
       - "8302:8302/udp"
       - "8400:8400"
       - "8500:8500"
-    command: -server -bootstrap -ui-dir /ui
+    command: -server -bootstrap -advertise {{ ansible_default_ipv4.address }} -ui-dir /ui
 
 - name: Run swarm agent master
   when: swarm_master is defined
@@ -69,5 +69,5 @@
       - /etc/hosts:/etc/hosts
     command: >
       join
-        --advertise={{ hostname }}:2375
+        --advertise={{ hostname }}:2376
         consul://swarmbox-01:8500/
