@@ -55,7 +55,7 @@
         --tlskey=/etc/docker/server-key.pem
         --strategy spread
         -H tcp://0.0.0.0:{{ smarm_master_port }}
-        consul://swarmbox-01:8500/
+        consul://{{ swarm_master_node.hostname }}:8500/
 
 - name: Run swarm agent
   docker:
@@ -70,4 +70,4 @@
     command: >
       join
         --advertise={{ hostname }}:2376
-        consul://swarmbox-01:8500/
+        consul://{{ swarm_master_node.hostname }}:8500/
