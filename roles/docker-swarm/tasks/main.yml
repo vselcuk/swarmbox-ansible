@@ -4,7 +4,7 @@
   apt: name=python-pip state=present
 
 - name: Install docker-py as a workaround for Ansible issue
-  pip: name=docker-py version=1.2.3
+  pip: name=docker-py version=1.6.0
 
 - name: Install Consul on the master node
   when: swarm_master is defined
@@ -59,7 +59,7 @@
 
 - name: Run swarm agent
   docker:
-    name: swarm-agent
+    name: 'swarm-agent-{{ hostname }}'
     image: swarm:latest
     restart_policy: always
     state: started
@@ -71,3 +71,5 @@
       join
         --advertise={{ hostname }}:2376
         consul://{{ swarm_master_node.hostname }}:8500/
+
+- include: logging.yml

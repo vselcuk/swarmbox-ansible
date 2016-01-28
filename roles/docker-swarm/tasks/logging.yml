@@ -1,0 +1,47 @@
+- name: Install logstash on the master node
+  when: swarm_master is defined
+  docker:
+    name: logbox
+    hostname: logbox
+    image: sirile/minilogbox
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    expose:
+      - "5000"
+      - "5000/udp"
+      - "9200"
+    ports:
+      - "5000:5000"
+      - "5000:5000/udp"
+      - "9200:9200"
+
+- name: Install logspout on nodes
+  docker:
+    name: 'logspout-{{ hostname }}'
+    hostname: 'logspout-{{ hostname }}'
+    image: progrium/logspout
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+    command: syslog://{{ swarm_master_node.ansible_default_ipv4.address }}:5000
+
+- name: Install kibana on the master node
+  when: swarm_master is defined
+  docker:
+    name: kibanabox
+    hostname: kibanabox
+    image: sirile/kibanabox
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    expose:
+      - "5601"
+    ports:
+      - "5601:5601"
+    command: http://{{ swarm_master_node.ansible_default_ipv4.address }}:9200
