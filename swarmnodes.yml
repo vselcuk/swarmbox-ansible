@@ -1,4 +1,8 @@
 - hosts: boxes
+  pre_tasks:
+    - group_by: key=swarm_master_{{ swarm_master | default('false') }}
+    - set_fact:
+        swarm_master_node: '{{ hostvars[groups["swarm_master_true"] | first ] }}'
   remote_user: swarm
   gather_facts: yes
   roles:
