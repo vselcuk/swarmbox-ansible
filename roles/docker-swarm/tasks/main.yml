@@ -20,7 +20,7 @@
       - "8301"
       - "8302"
       - "8400"
-      - "8500:8500"
+      - "8500"
     ports:
       - "53:53"
       - "53:53/udp"
@@ -71,5 +71,3 @@
       join
         --advertise={{ hostname }}:2376
         consul://{{ swarm_master_node.hostname }}:8500/
-
-- include: logging.yml
