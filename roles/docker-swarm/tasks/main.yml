@@ -72,19 +72,6 @@
         --advertise={{ hostname }}:2376
         consul://{{ swarm_master_node.hostname }}:8500/
 
-- name: Run registrator
-  docker:
-    name: 'registrator-{{ hostname }}'
-    image: sourcestream/registrator
-    restart_policy: always
-    state: started
-    pull: missing
-    detach: true
-    net: host
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock
-    command: >
-      -internal consul://{{ swarm_master_node.ansible_default_ipv4.address }}:8500
 
 ### Overlay network for service discovery
 
@@ -102,3 +89,20 @@
   shell: docker network connect {{ service_discovery_network_name }} consul
   when: swarm_master is defined
   ignore_errors: True
+
+
+### Install the registrator so services are registred in consul
+
+- name: Run registrator
+  docker:
+    name: 'registrator-{{ hostname }}'
+    image: sourcestream/registrator
+    restart_policy: always
+    state: started
+    pull: missing
+    detach: true
+    net: "{{ service_discovery_network_name }}"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+    command: >
+      -internal consul://consul.{{ service_discovery_network_name }}:8500
