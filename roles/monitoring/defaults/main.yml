@@ -1,2 +1,3 @@
 ---
+monitoring_network_name: service-monitoring
 service_discovery_network_name: service-discovery

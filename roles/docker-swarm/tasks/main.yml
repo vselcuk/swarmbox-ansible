@@ -71,3 +71,34 @@
       join
         --advertise={{ hostname }}:2376
         consul://{{ swarm_master_node.hostname }}:8500/
+
+- name: Run registrator
+  docker:
+    name: 'registrator-{{ hostname }}'
+    image: sourcestream/registrator
+    restart_policy: always
+    state: started
+    pull: missing
+    detach: true
+    net: host
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+    command: >
+      -internal consul://{{ swarm_master_node.ansible_default_ipv4.address }}:8500
+
+### Overlay network for service discovery
+
+- name: Inspect the service discovery network overlay
+  shell: docker network inspect {{ service_discovery_network_name }}
+  when: swarm_master is defined
+  register: service_discovery_network
+  ignore_errors: True
+
+- name: Create overlay network for the service discovery
+  shell: docker network create -d overlay {{ service_discovery_network_name }}
+  when: service_discovery_network.failed == true and swarm_master is defined
+
+- name: Connect the consul container to the service discovery network
+  shell: docker network connect {{ service_discovery_network_name }} consul
+  when: swarm_master is defined
+  ignore_errors: True

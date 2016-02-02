@@ -1,0 +1,49 @@
+- name: Inspect the logging network overlay
+  shell: docker network inspect {{ monitoring_network_name }}
+  when: swarm_master is defined
+  register: monitoring_network
+  ignore_errors: True
+
+- name: Create overlay network for the logging
+  shell: docker network create -d overlay {{ monitoring_network_name }}
+  when: monitoring_network.failed == true and swarm_master is defined
+
+- name: Install cadvisor
+  docker:
+    name: cadvisor-{{ hostname }}
+    image: google/cadvisor:latest
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    net: "{{ monitoring_network_name }}"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    env:
+      SERVICE_NAME: monitoring
+
+- name: Install prometheus
+  when: swarm_master is defined
+  docker:
+    name: prometheus
+    image: sourcestream/prometheus-sd
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    expose:
+      - "9090"
+    ports:
+      - "9090:9090"
+    net: "{{ monitoring_network_name }}"
+    dns:
+      - "consul.{{ service_discovery_network_name }}"
+      - "8.8.8.8"
+
+- name: Connect the consul container to the service discovery network
+  shell: docker network connect {{ service_discovery_network_name }} prometheus
+  when: swarm_master is defined
+  ignore_errors: True
