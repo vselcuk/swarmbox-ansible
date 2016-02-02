@@ -1,0 +1,66 @@
+---
+- name: Inspect the logging network overlay
+  shell: docker network inspect {{ logging_network_name }}
+  when: swarm_master is defined
+  register: logging_network
+  ignore_errors: True
+
+- name: Create overlay network for the logging
+  shell: docker network create -d overlay {{ logging_network_name }}
+  when: logging_network.failed == true and swarm_master is defined
+
+- name: Install logstash on the master node
+  when: swarm_master is defined
+  docker:
+    name: logbox
+    hostname: logbox
+    image: sirile/minilogbox
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    net: "{{ logging_network_name }}"
+#    expose:
+#      - "5000"
+#      - "5000/udp"
+#      - "9200"
+#    ports:
+#      - "5000:5000"
+#      - "5000:5000/udp"
+#      - "9200:9200"
+
+- name: Install logspout on nodes
+  docker:
+    name: 'logspout-{{ hostname }}'
+    hostname: 'logspout-{{ hostname }}'
+    image: progrium/logspout
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    net: "{{ logging_network_name }}"
+#    expose:
+#      - "8000"
+#    ports:
+#      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+    command: syslog://logbox:5000
+
+
+- name: Install kibana on the master node
+  when: swarm_master is defined
+  docker:
+    name: kibanabox
+    hostname: kibanabox
+    image: sirile/kibanabox
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    net: "{{ logging_network_name }}"
+    expose:
+      - "5601"
+    ports:
+      - "5601:5601"
+    command: http://logbox:9200

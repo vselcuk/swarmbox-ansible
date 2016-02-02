@@ -4,7 +4,7 @@
   apt: name=python-pip state=present
 
 - name: Install docker-py as a workaround for Ansible issue
-  pip: name=docker-py version=1.2.3
+  pip: name=docker-py version=1.6.0
 
 - name: Install Consul on the master node
   when: swarm_master is defined
@@ -20,7 +20,7 @@
       - "8301"
       - "8302"
       - "8400"
-      - "8500:8500"
+      - "8500"
     ports:
       - "53:53"
       - "53:53/udp"
@@ -59,7 +59,7 @@
 
 - name: Run swarm agent
   docker:
-    name: swarm-agent
+    name: 'swarm-agent-{{ hostname }}'
     image: swarm:latest
     restart_policy: always
     state: started
@@ -71,3 +71,38 @@
       join
         --advertise={{ hostname }}:2376
         consul://{{ swarm_master_node.hostname }}:8500/
+
+
+### Overlay network for service discovery
+
+- name: Inspect the service discovery network overlay
+  shell: docker network inspect {{ service_discovery_network_name }}
+  when: swarm_master is defined
+  register: service_discovery_network
+  ignore_errors: True
+
+- name: Create overlay network for the service discovery
+  shell: docker network create -d overlay {{ service_discovery_network_name }}
+  when: service_discovery_network.failed == true and swarm_master is defined
+
+- name: Connect the consul container to the service discovery network
+  shell: docker network connect {{ service_discovery_network_name }} consul
+  when: swarm_master is defined
+  ignore_errors: True
+
+
+### Install the registrator so services are registred in consul
+
+- name: Run registrator
+  docker:
+    name: 'registrator-{{ hostname }}'
+    image: sourcestream/registrator
+    restart_policy: always
+    state: started
+    pull: missing
+    detach: true
+    net: "{{ service_discovery_network_name }}"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+    command: >
+      -internal consul://consul.{{ service_discovery_network_name }}:8500
