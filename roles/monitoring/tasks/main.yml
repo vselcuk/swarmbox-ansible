@@ -43,7 +43,22 @@
       - "consul.{{ service_discovery_network_name }}"
       - "8.8.8.8"
 
-- name: Connect the consul container to the service discovery network
+- name: Connect the prometheus container to the service discovery network
   shell: docker network connect {{ service_discovery_network_name }} prometheus
   when: swarm_master is defined
   ignore_errors: True
+
+- name: Install grafana
+  when: swarm_master is defined
+  docker:
+    name: grafana
+    image: grafana/grafana
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    net: "{{ monitoring_network_name }}"
