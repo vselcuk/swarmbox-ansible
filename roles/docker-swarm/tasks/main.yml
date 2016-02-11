@@ -33,9 +33,9 @@
     command: -server -bootstrap -advertise {{ ansible_default_ipv4.address }} -ui-dir /ui
 
 - name: Run swarm agent master
-  when: swarm_master is defined
+  #when: swarm_master is defined
   docker:
-    name: swarm-agent-master
+    name: swarm-agent-master-{{ hostname }}
     image: swarm:latest
     state: started
     expose: "{{ smarm_master_port }}"
@@ -49,12 +49,14 @@
       - /etc/hosts:/etc/hosts
     command: >
       manage
+        --replication
         --tlsverify
         --tlscacert=/etc/docker/ca.pem
         --tlscert=/etc/docker/server.pem
         --tlskey=/etc/docker/server-key.pem
         --strategy spread
         -H tcp://0.0.0.0:{{ smarm_master_port }}
+        --advertise={{ hostname }}:{{ smarm_master_port }}
         consul://{{ swarm_master_node.hostname }}:8500/
 
 - name: Run swarm agent
