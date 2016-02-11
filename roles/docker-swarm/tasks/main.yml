@@ -3,7 +3,7 @@
 - name: Install pip
   apt: name=python-pip state=present
 
-- name: Install docker-py as a workaround for Ansible issue
+- name: Install docker-py as a workaround for an Ansible issue
   pip: name=docker-py version=1.6.0
 
 - name: Install Consul on the master node
@@ -17,6 +17,7 @@
     detach: true
     expose:
       - "53"
+      - "8300"
       - "8301"
       - "8302"
       - "8400"
@@ -24,16 +25,44 @@
     ports:
       - "53:53"
       - "53:53/udp"
+      - "8300:8300"
       - "8301:8301"
       - "8301:8301/udp"
       - "8302:8302"
       - "8302:8302/udp"
       - "8400:8400"
       - "8500:8500"
-    command: -server -bootstrap -advertise {{ ansible_default_ipv4.address }} -ui-dir /ui
+    command: -server -advertise {{ ansible_default_ipv4.address }} -bootstrap-expect 3 -ui-dir /ui
+
+- name: Install Consul on the nodes
+  when: swarm_master is undefined
+  docker:
+    name: consul
+    image: progrium/consul
+    state: started
+    pull: missing
+    restart_policy: always
+    detach: true
+    expose:
+      - "53"
+      - "8300"
+      - "8301"
+      - "8302"
+      - "8400"
+      - "8500"
+    ports:
+      - "53:53"
+      - "53:53/udp"
+      - "8300:8300"
+      - "8301:8301"
+      - "8301:8301/udp"
+      - "8302:8302"
+      - "8302:8302/udp"
+      - "8400:8400"
+      - "8500:8500"
+    command: -server -advertise {{ ansible_default_ipv4.address }} -join {{ swarm_master_node.ansible_default_ipv4.address }} -ui-dir /ui
 
 - name: Run swarm agent master
-  #when: swarm_master is defined
   docker:
     name: swarm-agent-master-{{ hostname }}
     image: swarm:latest
@@ -57,7 +86,7 @@
         --strategy spread
         -H tcp://0.0.0.0:{{ smarm_master_port }}
         --advertise={{ hostname }}:{{ smarm_master_port }}
-        consul://{{ swarm_master_node.hostname }}:8500/
+        consul://{{ ansible_default_ipv4.address }}:8500/
 
 - name: Run swarm agent
   docker:
@@ -72,7 +101,7 @@
     command: >
       join
         --advertise={{ hostname }}:2376
-        consul://{{ swarm_master_node.hostname }}:8500/
+        consul://{{ ansible_default_ipv4.address }}:8500/
 
 
 ### Overlay network for service discovery
@@ -108,4 +137,4 @@
       - /var/run/docker.sock:/tmp/docker.sock
 #      - /etc/hosts:/etc/hosts
     command: >
-      -internal consul://{{ swarm_master_node.ansible_default_ipv4.address }}:8500
+      -internal consul://{{ ansible_default_ipv4.address }}:8500
