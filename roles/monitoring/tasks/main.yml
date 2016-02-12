@@ -40,13 +40,13 @@
       - "9090:9090"
     net: "{{ monitoring_network_name }}"
     dns:
-      - "consul.{{ service_discovery_network_name }}"
+      - "{{ swarm_master_node.ansible_default_ipv4.address }}"
       - "8.8.8.8"
 
-- name: Connect the prometheus container to the service discovery network
-  shell: docker network connect {{ service_discovery_network_name }} prometheus
-  when: swarm_master is defined
-  ignore_errors: True
+#- name: Connect the prometheus container to the service discovery network
+#  shell: docker network connect {{ service_discovery_network_name }} prometheus
+#  when: swarm_master is defined
+#  ignore_errors: True
 
 - name: Install grafana
   when: swarm_master is defined
